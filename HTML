@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocBot - Your Doctor Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.3/dist/tailwind.min.css" rel="stylesheet"/>
+    <style>
+        body {
+            background-color: #f0f9ff; /* Soft blue background */
+        }
+        /* Custom styles for playful and fun design */
+        .send-button {
+            background-color: #4ade80; /* Green button for sending messages */
+        }
+        #messageInput {
+            background-color: #e0f2fe; /* Lighter blue for the input field */
+            color: #1e40af; /* Dark blue text */
+        }
+        #chatbox > div.self-end {
+            border-color: #60a5fa; /* Light blue border for user's messages */
+            background-color: #bfdbfe; /* Lighter blue background for user's messages */
+        }
+        #chatbox > div.self-start {
+            border-color: #facc15; /* Yellow border for bot's messages */
+            background-color: #fef3c7; /* Light yellow background for bot's messages */
+        }
+        header {
+            background-color: #1e40af; /* Dark blue background for header */
+            color: #ffffff; /* White text for contrast */
+        }
+    </style>
+</head>
+<body>
+<div class="px-4 py-2">
+    <header class="text-center py-4">
+        <h1 class="text-lg font-bold">DocBot - Your Doctor Assistant</h1>
+        <p>A playful and fun chatbot designed for kids.</p>
+    </header>
+    <div class="flex justify-center">
+        <div class="px-2 w-full max-w-2xl">
+            <div id="chatbox" class="flex flex-col items-start overflow-auto" style="height: 500px;"></div>
+            <div class="flex flex-row my-5">
+                <input class="shadow flex-grow rounded p-2 mr-2" id="messageInput" placeholder="Ask me anything..." type="text"/>
+                <button class="send-button rounded py-2 px-4 text-white font-bold" id="sendButton">Let's Talk</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const chatbox = document.getElementById("chatbox");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+    const chatId = crypto.randomUUID();
+
+    let receiving = false;
+    const systemPrompt = "You are an attentive and knowledgeable doctor assistant, providing medical advice and assistance to the user.";
+
+    function createMessageElement(text, alignment) {
+        const messageElement = document.createElement("div");
+
+        messageElement.className = `inline-block my-2.5 p-2.5 rounded border ${alignment === "left" ? "self-start border-yellow-400 bg-yellow-200" : "self-end border-blue-400 bg-blue-200"}`;
+        messageElement.textContent = text;
+        return messageElement;
+    }
+
+    function connectWebSocket(message) {
+        receiving = true;
+        const url = "wss://example.com/ws"; // Placeholder WebSocket URL
+        const websocket = new WebSocket(url);
+
+        websocket.addEventListener("open", () => {
+            websocket.send(JSON.stringify({
+                chatId: chatId,
+                appId: "docbot",
+                systemPrompt: systemPrompt,
+                message: message,
+            }));
+        });
+
+        const messageElement = createMessageElement("", "left");
+        chatbox.appendChild(messageElement);
+
+        websocket.onmessage = (event) => {
+            messageElement.innerText += event.data;
+            chatbox.scrollTop = chatbox.scrollHeight;
+        };
+
+        websocket.onclose = (event) => {
+            if (event.code === 1000) {
+                receiving = false;
+            } else {
+                messageElement.textContent += "Error getting response from server. Refresh the page and try again.";
+                chatbox.scrollTop = chatbox.scrollHeight;
+                receiving = false;
+            }
+        };
+    }
+
+    sendButton.addEventListener("click", () => {
+        if (!receiving && messageInput.value.trim() !== "") {
+            const messageText = messageInput.value.trim();
+            messageInput.value = "";
+            const messageElement = createMessageElement(messageText, "right");
+            chatbox.appendChild(messageElement);
+            chatbox.scrollTop = chatbox.scrollHeight;
+
+            // Placeholder: This should ideally connect and send to an actual WebSocket service
+            setTimeout(() => { // Mock receiving a message
+                const replyText = "I'm here to help! What do you need?";
+                const replyElement = createMessageElement(replyText, "left");
+                chatbox.appendChild(replyElement);
+                chatbox.scrollTop = chatbox.scrollHeight;
+            }, 1000);
+        }
+    });
+
+    messageInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !receiving && messageInput.value.trim() !== "") {
+            event.preventDefault();
+            sendButton.click();
+        }
+    });
+</script>
+</body>
+</html>
